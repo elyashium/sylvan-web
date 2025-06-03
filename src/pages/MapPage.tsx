@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import MapView from '../components/MapView';
-import { Map, List, Filter, Loader2 } from 'lucide-react';
+import { Map, List, Filter, Loader2, AlertTriangle } from 'lucide-react';
 import { PlantLocation } from '../types';
 import { getPlantLocations } from '../services/plantService';
+import mockData from '../services/mockPlantService';
 
 const MapPage = () => {
   const [plantLocations, setPlantLocations] = useState<PlantLocation[]>([]);
@@ -10,17 +11,27 @@ const MapPage = () => {
   const [view, setView] = useState<'map' | 'list'>('map');
   const [filter, setFilter] = useState<'all' | 'healthy' | 'warning' | 'critical'>('all');
   const [mapKey, setMapKey] = useState<number>(0); // Used to force map re-render when needed
+  const [error, setError] = useState<string | null>(null);
+  const [usingMockData, setUsingMockData] = useState(false);
 
   // Fetch plant locations from service
   const fetchPlantLocations = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const locations = await getPlantLocations();
       setPlantLocations(locations);
+      setUsingMockData(false);
       // Force map to re-render with new locations
       setMapKey(prev => prev + 1);
     } catch (error) {
       console.error('Error fetching plant locations:', error);
+      // Fall back to mock data
+      setPlantLocations(mockData.plantLocations);
+      setUsingMockData(true);
+      setError('Could not fetch live data. Using demo data instead.');
+      // Force map to re-render with mock locations
+      setMapKey(prev => prev + 1);
     } finally {
       setIsLoading(false);
     }
@@ -83,6 +94,20 @@ const MapPage = () => {
           )}
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-warning/20 border border-warning/30 rounded-md flex items-center">
+          <AlertTriangle size={18} className="text-warning mr-2" />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
+
+      {usingMockData && (
+        <div className="mb-4 p-3 bg-info/20 border border-info/30 rounded-md flex items-center">
+          <Map size={18} className="text-info mr-2" />
+          <span className="text-sm">Using demo data. The map may show with developer watermarks.</span>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center space-x-2">

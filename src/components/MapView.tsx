@@ -3,6 +3,7 @@ import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
 import { PlantLocation } from '../types';
 import PlantMarker from './PlantMarker';
+import MapFallback from './MapFallback';
 
 interface MapViewProps {
   plantLocations?: PlantLocation[];
@@ -65,12 +66,22 @@ const MapView = ({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapCenter, setMapCenter] = useState(initialCenter);
+  const locationsRef = useRef(plantLocations);
+  const [mapError, setMapError] = useState<string | null>(null);
 
-  // Load Google Maps API
-  const { isLoaded } = useJsApiLoader({
+  // Load Google Maps API with a placeholder key (for development only)
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: 'AIzaSyDZz3gYVTfavPNN3wVFnSqG0xWjMOUmnoA'
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDZz3gYVTfavPNN3wVFnSqG0xWjMOUmnoA'
   });
+
+  // Handle Google Maps API errors
+  useEffect(() => {
+    if (loadError) {
+      console.error("Error loading Google Maps API:", loadError);
+      setMapError("Unable to load Google Maps");
+    }
+  }, [loadError]);
 
   // Calculate center from plant locations
   const calculateCenter = useCallback((locations: PlantLocation[]) => {
@@ -96,41 +107,52 @@ const MapView = ({
     };
   }, [initialCenter]);
 
-  // Update center when plant locations change
+  // Update reference when plantLocations change to avoid dependency issues
+  useEffect(() => {
+    locationsRef.current = plantLocations;
+  }, [plantLocations]);
+
+  // Set initial map center once when component mounts
   useEffect(() => {
     if (plantLocations.length > 0) {
       const newCenter = calculateCenter(plantLocations);
       setMapCenter(newCenter);
     }
-  }, [plantLocations, calculateCenter]);
+  }, [calculateCenter]); // Only run once on mount and if calculateCenter changes
 
   const onLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    setMap(map);
+    try {
+      mapRef.current = map;
+      setMap(map);
 
-    // Fit map to markers if there are any
-    if (plantLocations.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      plantLocations.forEach(location => {
-        bounds.extend({ lat: location.lat, lng: location.lng });
-      });
-      
-      // Use fitBounds with a slight delay to ensure it works properly
-      setTimeout(() => {
-        map.fitBounds(bounds);
-        
-        // Don't zoom in too far
-        const listener = google.maps.event.addListener(map, 'idle', () => {
-          if (map.getZoom() > 16) map.setZoom(16);
-          google.maps.event.removeListener(listener);
+      // Fit map to markers if there are any
+      const currentLocations = locationsRef.current;
+      if (currentLocations.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        currentLocations.forEach(location => {
+          bounds.extend({ lat: location.lat, lng: location.lng });
         });
-      }, 100);
-    } else {
-      // If no plants, just center on the initialCenter
-      map.setCenter(initialCenter);
-      map.setZoom(zoom);
+        
+        // Use fitBounds with a slight delay to ensure it works properly
+        setTimeout(() => {
+          map.fitBounds(bounds);
+          
+          // Don't zoom in too far
+          const listener = google.maps.event.addListener(map, 'idle', () => {
+            if (map.getZoom() > 16) map.setZoom(16);
+            google.maps.event.removeListener(listener);
+          });
+        }, 100);
+      } else {
+        // If no plants, just center on the initialCenter
+        map.setCenter(initialCenter);
+        map.setZoom(zoom);
+      }
+    } catch (error) {
+      console.error("Error loading map:", error);
+      setMapError("Error initializing map");
     }
-  }, [plantLocations, initialCenter, zoom]);
+  }, [initialCenter, zoom]);
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
@@ -140,17 +162,25 @@ const MapView = ({
   // If the map exists and plant locations change, update the map bounds
   useEffect(() => {
     if (map && plantLocations.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      plantLocations.forEach(location => {
-        bounds.extend({ lat: location.lat, lng: location.lng });
-      });
-      
-      // Use fitBounds with a slight delay to ensure it works properly
-      setTimeout(() => {
-        map.fitBounds(bounds);
-      }, 100);
+      try {
+        const bounds = new google.maps.LatLngBounds();
+        plantLocations.forEach(location => {
+          bounds.extend({ lat: location.lat, lng: location.lng });
+        });
+        
+        // Use fitBounds with a slight delay to ensure it works properly
+        setTimeout(() => {
+          map.fitBounds(bounds);
+        }, 100);
+      } catch (error) {
+        console.error("Error updating map bounds:", error);
+      }
     }
   }, [map, plantLocations]);
+
+  if (mapError) {
+    return <MapFallback message={mapError} />;
+  }
 
   if (!isLoaded) {
     return (
@@ -184,6 +214,10 @@ const MapView = ({
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: true
+        }}
+        onError={(e) => {
+          console.error("Map error:", e);
+          setMapError("Error displaying map");
         }}
       >
         {plantLocations.map(plant => (

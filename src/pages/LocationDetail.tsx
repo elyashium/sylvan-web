@@ -11,11 +11,13 @@ import {
   Calendar,
   Twitter,
   Leaf,
-  Sprout
+  Sprout,
+  AlertTriangle
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { PlantDetails } from '../types';
 import { getPlantDetails } from '../services/plantService';
+import { getMockPlantDetails } from '../services/mockPlantService';
 import MapView from '../components/MapView';
 
 const LocationDetail = () => {
@@ -24,17 +26,33 @@ const LocationDetail = () => {
   const [plant, setPlant] = useState<PlantDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'details' | 'tweets' | 'history'>('details');
+  const [usingMockData, setUsingMockData] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       // Fetch plant details
       const fetchPlantDetails = async () => {
         setLoading(true);
+        setError(null);
         try {
           const plantData = await getPlantDetails(id);
           setPlant(plantData);
+          setUsingMockData(false);
         } catch (error) {
           console.error('Error fetching plant details:', error);
+          
+          // Try to get mock data instead
+          const mockPlant = getMockPlantDetails(id);
+          if (mockPlant) {
+            setPlant(mockPlant);
+            setUsingMockData(true);
+            setError('Could not fetch live data. Using demo data instead.');
+          } else {
+            // If no mock data exists for this ID
+            setPlant(null);
+            setError(`Plant with ID ${id} not found.`);
+          }
         } finally {
           setLoading(false);
         }
@@ -83,9 +101,9 @@ const LocationDetail = () => {
         </p>
         <button 
           className="btn-primary"
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/map')}
         >
-          Return to Dashboard
+          Return to Map
         </button>
       </div>
     );
@@ -122,6 +140,20 @@ const LocationDetail = () => {
         </div>
       </div>
       
+      {error && (
+        <div className="p-3 bg-warning/20 border border-warning/30 rounded-md flex items-center">
+          <AlertTriangle size={18} className="text-warning mr-2" />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
+      
+      {usingMockData && !error && (
+        <div className="p-3 bg-info/20 border border-info/30 rounded-md flex items-center">
+          <Leaf size={18} className="text-info mr-2" />
+          <span className="text-sm">Using demo data. Live data is currently unavailable.</span>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <div className="rounded-lg bg-white p-6 shadow-sm">
