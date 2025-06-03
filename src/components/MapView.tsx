@@ -60,16 +60,14 @@ const defaultPlantLocations: PlantLocation[] = [
 
 const MapView = ({ 
   plantLocations = defaultPlantLocations, 
-  initialCenter = { lat: 37.7749, lng: -122.4194 }, 
-  zoom = 13 
+  initialCenter = { lat: 28.6139, lng: 77.209 }, 
+  zoom = 10 
 }: MapViewProps) => {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  // Use refs to avoid re-renders
   const mapRef = useRef<google.maps.Map | null>(null);
-  const [mapCenter, setMapCenter] = useState(initialCenter);
-  const locationsRef = useRef(plantLocations);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Load Google Maps API with a placeholder key (for development only)
+  // Load Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDZz3gYVTfavPNN3wVFnSqG0xWjMOUmnoA'
@@ -79,107 +77,54 @@ const MapView = ({
   useEffect(() => {
     if (loadError) {
       console.error("Error loading Google Maps API:", loadError);
-      setMapError("Unable to load Google Maps");
+      // Temporarily ignore billing error for rendering map attempt
+      // Check if loadError and its message property exist before accessing it
+      if (loadError && typeof loadError.message === 'string' && loadError.message.includes("BillingNotEnabledMapError")) {
+        console.warn("BillingNotEnabledMapError detected, attempting to render map for debugging markers anyway.");
+        // Do NOT setMapError for this specific case to allow map rendering attempt
+      } else {
+        setMapError("Unable to load Google Maps");
+      }
     }
   }, [loadError]);
 
-  // Calculate center from plant locations
-  const calculateCenter = useCallback((locations: PlantLocation[]) => {
-    if (locations.length === 0) return initialCenter;
-    
-    // If there's only one location, center on it
-    if (locations.length === 1) {
-      return { lat: locations[0].lat, lng: locations[0].lng };
-    }
-    
-    // Calculate the center of all locations
-    let totalLat = 0;
-    let totalLng = 0;
-    
-    locations.forEach(location => {
-      totalLat += location.lat;
-      totalLng += location.lng;
-    });
-    
-    return {
-      lat: totalLat / locations.length,
-      lng: totalLng / locations.length
-    };
-  }, [initialCenter]);
-
-  // Update reference when plantLocations change to avoid dependency issues
-  useEffect(() => {
-    locationsRef.current = plantLocations;
-  }, [plantLocations]);
-
-  // Set initial map center once when component mounts
-  useEffect(() => {
-    if (plantLocations.length > 0) {
-      const newCenter = calculateCenter(plantLocations);
-      setMapCenter(newCenter);
-    }
-  }, [calculateCenter, plantLocations]); // Include plantLocations in the dependency array
-
+  // Handle map load
   const onLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    
     try {
-      mapRef.current = map;
-      setMap(map);
-
-      // Fit map to markers if there are any
-      const currentLocations = locationsRef.current;
-      if (currentLocations.length > 0) {
+      // If we have plant locations, fit the map to them
+      if (plantLocations.length > 0) {
         const bounds = new google.maps.LatLngBounds();
-        currentLocations.forEach(location => {
+        
+        plantLocations.forEach(location => {
           bounds.extend({ lat: location.lat, lng: location.lng });
         });
         
-        // Use fitBounds with a slight delay to ensure it works properly
-        setTimeout(() => {
-          map.fitBounds(bounds);
-          
-          // Don't zoom in too far
-          const listener = google.maps.event.addListener(map, 'idle', () => {
-            if (map.getZoom() > 16) map.setZoom(16);
-            google.maps.event.removeListener(listener);
-          });
-        }, 100);
+        map.fitBounds(bounds);
+        
+        // Set reasonable zoom limits
+        google.maps.event.addListenerOnce(map, 'idle', () => {
+          const currentZoom = map.getZoom();
+          if (currentZoom !== undefined) {
+            if (currentZoom > 16) map.setZoom(16);
+            if (currentZoom < 9) map.setZoom(9);
+          }
+        });
       } else {
         // If no plants, just center on the initialCenter
         map.setCenter(initialCenter);
         map.setZoom(zoom);
       }
     } catch (error) {
-      console.error("Error loading map:", error);
-      setMapError("Error initializing map");
+      console.error("Error initializing map:", error);
+      setMapError("Error displaying map");
     }
-  }, [initialCenter, zoom]);
+  }, [initialCenter, plantLocations, zoom]);
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
-    setMap(null);
   }, []);
-
-  // If the map exists and plant locations change, update the map bounds
-  useEffect(() => {
-    if (map && plantLocations.length > 0) {
-      try {
-        const bounds = new google.maps.LatLngBounds();
-        plantLocations.forEach(location => {
-          bounds.extend({ lat: location.lat, lng: location.lng });
-        });
-        
-        // Use fitBounds with a slight delay to ensure it works properly
-        const timeoutId = setTimeout(() => {
-          map.fitBounds(bounds);
-        }, 100);
-        
-        // Clean up timeout to prevent memory leaks
-        return () => clearTimeout(timeoutId);
-      } catch (error) {
-        console.error("Error updating map bounds:", error);
-      }
-    }
-  }, [map, plantLocations]);
 
   if (mapError) {
     return <MapFallback message={mapError} />;
@@ -200,7 +145,7 @@ const MapView = ({
     <div className="h-full w-full rounded-lg shadow-sm overflow-hidden">
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={mapCenter}
+        center={initialCenter}
         zoom={zoom}
         onLoad={onLoad}
         onUnmount={onUnmount}
@@ -216,11 +161,9 @@ const MapView = ({
           zoomControl: true,
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: true
-        }}
-        onError={(e) => {
-          console.error("Map error:", e);
-          setMapError("Error displaying map");
+          fullscreenControl: true,
+          backgroundColor: '#f0f7eb',
+          mapTypeId: google.maps.MapTypeId.ROADMAP
         }}
       >
         {plantLocations.map(plant => (

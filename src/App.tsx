@@ -7,6 +7,8 @@ import LocationDetail from './pages/LocationDetail';
 import MapPage from './pages/MapPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import TweetsPage from './pages/TweetsPage';
+import SettingsPage from './pages/SettingsPage';
+import HelpPage from './pages/HelpPage';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -47,6 +49,8 @@ function App() {
             <Route path="/map" element={<MapPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/tweets" element={<TweetsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/help" element={<HelpPage />} />
           </Route>
         </Route>
         

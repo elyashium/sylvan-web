@@ -19,11 +19,11 @@ const Layout = () => {
   }
 
   return (
-    <div className="flex h-screen w-full bg-bgMain">
+    <div className="min-h-screen w-full bg-bgMain">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-col overflow-hidden">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="overflow-y-auto p-4 md:px-8 md:py-4 pt-12">
           <Outlet />
         </main>
       </div>

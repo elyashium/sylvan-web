@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Marker, InfoWindow } from '@react-google-maps/api';
 import { useNavigate } from 'react-router-dom';
 import { PlantLocation } from '../types';
@@ -9,12 +9,10 @@ interface PlantMarkerProps {
 
 const PlantMarker = ({ plant }: PlantMarkerProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [markerRef, setMarkerRef] = useState<google.maps.Marker | null>(null);
+  const [markerInstance, setMarkerInstance] = useState<google.maps.Marker | null>(null);
   const navigate = useNavigate();
 
-  // Get emoji and marker options based on plant status
   const getMarkerOptions = (status: 'healthy' | 'warning' | 'critical') => {
-    // Define emoji based on status
     let emoji;
     switch (status) {
       case 'healthy':
@@ -29,14 +27,12 @@ const PlantMarker = ({ plant }: PlantMarkerProps) => {
       default:
         emoji = '🌱';
     }
-
     return {
       label: {
         text: emoji,
         fontSize: '24px',
-        className: 'marker-label'
+        className: 'marker-label' 
       },
-      // Make the marker itself transparent so only the emoji shows
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 0,
@@ -51,21 +47,24 @@ const PlantMarker = ({ plant }: PlantMarkerProps) => {
   };
 
   const onMarkerLoad = (marker: google.maps.Marker) => {
-    setMarkerRef(marker);
+    setMarkerInstance(marker);
   };
 
-  // Add a bounce animation when the marker is first created
   useEffect(() => {
-    if (markerRef) {
-      markerRef.setAnimation(google.maps.Animation.DROP);
+    if (markerInstance) {
+      markerInstance.setAnimation(google.maps.Animation.DROP);
     }
-  }, [markerRef]);
+  }, [markerInstance]);
+
+  const handleMarkerClick = () => {
+    setIsOpen(true);
+  };
 
   return (
     <>
       <Marker
         position={{ lat: plant.lat, lng: plant.lng }}
-        onClick={() => setIsOpen(true)}
+        onClick={handleMarkerClick}
         {...getMarkerOptions(plant.status)}
         title={plant.name}
         onLoad={onMarkerLoad}
@@ -74,7 +73,7 @@ const PlantMarker = ({ plant }: PlantMarkerProps) => {
 
       {isOpen && (
         <InfoWindow
-          position={{ lat: plant.lat, lng: plant.lng }}
+          anchor={markerInstance}
           onCloseClick={() => setIsOpen(false)}
         >
           <div className="p-1">
