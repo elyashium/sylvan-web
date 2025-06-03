@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Marker, InfoWindow } from '@react-google-maps/api';
 import { useNavigate } from 'react-router-dom';
 import { PlantLocation } from '../types';
@@ -9,6 +9,7 @@ interface PlantMarkerProps {
 
 const PlantMarker = ({ plant }: PlantMarkerProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [markerRef, setMarkerRef] = useState<google.maps.Marker | null>(null);
   const navigate = useNavigate();
 
   // Get marker icon based on plant status
@@ -57,14 +58,26 @@ const PlantMarker = ({ plant }: PlantMarkerProps) => {
     navigate(`/location/${plant.id}`);
   };
 
+  const onMarkerLoad = (marker: google.maps.Marker) => {
+    setMarkerRef(marker);
+  };
+
+  // Add a bounce animation when the marker is first created
+  useEffect(() => {
+    if (markerRef) {
+      markerRef.setAnimation(google.maps.Animation.DROP);
+    }
+  }, [markerRef]);
+
   return (
     <>
       <Marker
         position={{ lat: plant.lat, lng: plant.lng }}
         onClick={() => setIsOpen(true)}
         icon={getMarkerIcon(plant.status)}
-        animation={google.maps.Animation.DROP}
         title={plant.name}
+        onLoad={onMarkerLoad}
+        zIndex={plant.status === 'critical' ? 3 : plant.status === 'warning' ? 2 : 1}
       />
 
       {isOpen && (

@@ -64,12 +64,45 @@ const MapView = ({
 }: MapViewProps) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const [mapCenter, setMapCenter] = useState(initialCenter);
 
   // Load Google Maps API
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: 'AIzaSyDZz3gYVTfavPNN3wVFnSqG0xWjMOUmnoA'
   });
+
+  // Calculate center from plant locations
+  const calculateCenter = useCallback((locations: PlantLocation[]) => {
+    if (locations.length === 0) return initialCenter;
+    
+    // If there's only one location, center on it
+    if (locations.length === 1) {
+      return { lat: locations[0].lat, lng: locations[0].lng };
+    }
+    
+    // Calculate the center of all locations
+    let totalLat = 0;
+    let totalLng = 0;
+    
+    locations.forEach(location => {
+      totalLat += location.lat;
+      totalLng += location.lng;
+    });
+    
+    return {
+      lat: totalLat / locations.length,
+      lng: totalLng / locations.length
+    };
+  }, [initialCenter]);
+
+  // Update center when plant locations change
+  useEffect(() => {
+    if (plantLocations.length > 0) {
+      const newCenter = calculateCenter(plantLocations);
+      setMapCenter(newCenter);
+    }
+  }, [plantLocations, calculateCenter]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -81,29 +114,41 @@ const MapView = ({
       plantLocations.forEach(location => {
         bounds.extend({ lat: location.lat, lng: location.lng });
       });
-      map.fitBounds(bounds);
       
-      // Don't zoom in too far
-      const listener = google.maps.event.addListener(map, 'idle', () => {
-        if (map.getZoom() > 16) map.setZoom(16);
-        google.maps.event.removeListener(listener);
-      });
+      // Use fitBounds with a slight delay to ensure it works properly
+      setTimeout(() => {
+        map.fitBounds(bounds);
+        
+        // Don't zoom in too far
+        const listener = google.maps.event.addListener(map, 'idle', () => {
+          if (map.getZoom() > 16) map.setZoom(16);
+          google.maps.event.removeListener(listener);
+        });
+      }, 100);
+    } else {
+      // If no plants, just center on the initialCenter
+      map.setCenter(initialCenter);
+      map.setZoom(zoom);
     }
-  }, [plantLocations]);
+  }, [plantLocations, initialCenter, zoom]);
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
     setMap(null);
   }, []);
 
-  // If the plant locations change, update the map bounds
+  // If the map exists and plant locations change, update the map bounds
   useEffect(() => {
     if (map && plantLocations.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       plantLocations.forEach(location => {
         bounds.extend({ lat: location.lat, lng: location.lng });
       });
-      map.fitBounds(bounds);
+      
+      // Use fitBounds with a slight delay to ensure it works properly
+      setTimeout(() => {
+        map.fitBounds(bounds);
+      }, 100);
     }
   }, [map, plantLocations]);
 
@@ -122,7 +167,7 @@ const MapView = ({
     <div className="h-full w-full rounded-lg shadow-sm overflow-hidden">
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={initialCenter}
+        center={mapCenter}
         zoom={zoom}
         onLoad={onLoad}
         onUnmount={onUnmount}

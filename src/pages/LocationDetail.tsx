@@ -313,6 +313,7 @@ const LocationDetail = () => {
             <h3 className="mb-4 text-lg font-medium text-textPrimary">Location</h3>
             <div className="h-[300px] w-full">
               <MapView 
+                key={plant.id}
                 plantLocations={[{
                   id: plant.id,
                   name: plant.name,
