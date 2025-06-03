@@ -1,4 +1,5 @@
 import { PlantLocation, PlantDetails } from '../types';
+import { mockSensorData } from '../utils/mockData';
 
 // Mock plant locations data
 const mockPlantLocations: PlantLocation[] = [
@@ -57,6 +58,26 @@ const mockPlantLocations: PlantLocation[] = [
     lastUpdated: '10 minutes ago'
   }
 ];
+
+// Add sensor data IDs to support dashboard links
+const sensorDataPlantLocations = mockSensorData.map(sensor => {
+  const location = sensor.gps || (sensor.location ? { lat: sensor.location.latitude, lng: sensor.location.longitude } : null);
+  if (!location) return null;
+  
+  return {
+    id: sensor._id,
+    name: `Plant at ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
+    lat: location.lat,
+    lng: location.lng,
+    status: sensor.temperature && sensor.temperature > 30 ? 'warning' : 
+           sensor.soilMoisture && sensor.soilMoisture < 20 ? 'critical' : 'healthy',
+    type: 'Sensor Plant',
+    lastUpdated: '5 minutes ago'
+  } as PlantLocation;
+}).filter(Boolean) as PlantLocation[];
+
+// Combine both location sets
+const allPlantLocations = [...mockPlantLocations, ...sensorDataPlantLocations];
 
 // Mock plant details data
 const mockPlantDetails: Record<string, PlantDetails> = {
@@ -154,12 +175,54 @@ const mockPlantDetails: Record<string, PlantDetails> = {
   }
 };
 
+// Add sensor data plant details
+mockSensorData.forEach(sensor => {
+  const location = sensor.gps || (sensor.location ? { lat: sensor.location.latitude, lng: sensor.location.longitude } : null);
+  if (!location) return;
+  
+  mockPlantDetails[sensor._id] = {
+    id: sensor._id,
+    name: `Sensor Plant ${sensor._id.substring(0, 6)}`,
+    type: 'Sensor Plant',
+    species: 'Unknown Species',
+    location: {
+      name: `Location at ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
+      lat: location.lat,
+      lng: location.lng
+    },
+    status: sensor.temperature && sensor.temperature > 30 ? 'warning' : 
+           sensor.soilMoisture && sensor.soilMoisture < 20 ? 'critical' : 'healthy',
+    lastWatered: sensor.createdAt,
+    nextWatering: new Date(new Date(sensor.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    sensorData: {
+      timestamp: sensor.timestamp || sensor.createdAt,
+      temperature: sensor.temperature || 22,
+      humidity: sensor.humidity || 50,
+      soilMoisture: sensor.soilMoisture || 40,
+      lightLevel: 800,
+      waterLevel: 50
+    },
+    tweets: [
+      {
+        content: "I'm a sensor plant reporting my data!",
+        timestamp: sensor.createdAt
+      }
+    ],
+    history: [
+      {
+        date: new Date(sensor.createdAt).toISOString().split('T')[0],
+        event: 'Sensor Installed'
+      }
+    ]
+  };
+});
+
 // Get all plant locations
 export const getPlantLocations = async (): Promise<PlantLocation[]> => {
   // Simulate API call
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve(mockPlantLocations);
+      resolve(allPlantLocations);
     }, 500);
   });
 };

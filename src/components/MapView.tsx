@@ -23,8 +23,8 @@ const defaultPlantLocations: PlantLocation[] = [
   {
     id: '1',
     name: 'Monstera Deliciosa',
-    lat: 37.7749,
-    lng: -122.4194,
+    lat: 28.6139,
+    lng: 77.209,
     status: 'healthy',
     type: 'Indoor',
     lastUpdated: '2 minutes ago'
@@ -32,8 +32,8 @@ const defaultPlantLocations: PlantLocation[] = [
   {
     id: '2',
     name: 'Snake Plant',
-    lat: 37.7695,
-    lng: -122.4268,
+    lat: 28.5139,
+    lng: 77.309,
     status: 'warning',
     type: 'Indoor',
     lastUpdated: '15 minutes ago'
@@ -41,8 +41,8 @@ const defaultPlantLocations: PlantLocation[] = [
   {
     id: '3',
     name: 'Fiddle Leaf Fig',
-    lat: 37.7835,
-    lng: -122.4089,
+    lat: 28.7139,
+    lng: 77.109,
     status: 'critical',
     type: 'Indoor',
     lastUpdated: '1 hour ago'
@@ -50,8 +50,8 @@ const defaultPlantLocations: PlantLocation[] = [
   {
     id: '4',
     name: 'Tomato Plant',
-    lat: 37.7845,
-    lng: -122.4300,
+    lat: 28.4139,
+    lng: 77.409,
     status: 'healthy',
     type: 'Outdoor',
     lastUpdated: '5 minutes ago'
@@ -118,7 +118,7 @@ const MapView = ({
       const newCenter = calculateCenter(plantLocations);
       setMapCenter(newCenter);
     }
-  }, [calculateCenter]); // Only run once on mount and if calculateCenter changes
+  }, [calculateCenter, plantLocations]); // Include plantLocations in the dependency array
 
   const onLoad = useCallback((map: google.maps.Map) => {
     try {
@@ -169,9 +169,12 @@ const MapView = ({
         });
         
         // Use fitBounds with a slight delay to ensure it works properly
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           map.fitBounds(bounds);
         }, 100);
+        
+        // Clean up timeout to prevent memory leaks
+        return () => clearTimeout(timeoutId);
       } catch (error) {
         console.error("Error updating map bounds:", error);
       }
