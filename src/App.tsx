@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import LocationDetail from './pages/LocationDetail';
+import MapPage from './pages/MapPage';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -41,6 +42,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/location/:id" element={<LocationDetail />} />
+            <Route path="/map" element={<MapPage />} />
           </Route>
         </Route>
         
