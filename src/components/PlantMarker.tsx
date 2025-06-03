@@ -12,46 +12,38 @@ const PlantMarker = ({ plant }: PlantMarkerProps) => {
   const [markerRef, setMarkerRef] = useState<google.maps.Marker | null>(null);
   const navigate = useNavigate();
 
-  // Get marker icon based on plant status
-  const getMarkerIcon = (status: 'healthy' | 'warning' | 'critical') => {
+  // Get emoji and marker options based on plant status
+  const getMarkerOptions = (status: 'healthy' | 'warning' | 'critical') => {
+    // Define emoji based on status
+    let emoji;
     switch (status) {
       case 'healthy':
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: '#34D399',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-          scale: 8
-        };
+        emoji = '🌱';
+        break;
       case 'warning':
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: '#FBBF24',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-          scale: 8
-        };
+        emoji = '🌿';
+        break;
       case 'critical':
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: '#F87171',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-          scale: 8
-        };
+        emoji = '🚨';
+        break;
       default:
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: '#60A5FA',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-          scale: 8
-        };
+        emoji = '🌱';
     }
+
+    return {
+      label: {
+        text: emoji,
+        fontSize: '24px',
+        className: 'marker-label'
+      },
+      // Make the marker itself transparent so only the emoji shows
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 0,
+        fillOpacity: 0,
+        strokeOpacity: 0
+      }
+    };
   };
 
   const navigateToPlant = () => {
@@ -74,7 +66,7 @@ const PlantMarker = ({ plant }: PlantMarkerProps) => {
       <Marker
         position={{ lat: plant.lat, lng: plant.lng }}
         onClick={() => setIsOpen(true)}
-        icon={getMarkerIcon(plant.status)}
+        {...getMarkerOptions(plant.status)}
         title={plant.name}
         onLoad={onMarkerLoad}
         zIndex={plant.status === 'critical' ? 3 : plant.status === 'warning' ? 2 : 1}

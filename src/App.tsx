@@ -5,6 +5,8 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import LocationDetail from './pages/LocationDetail';
 import MapPage from './pages/MapPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import TweetsPage from './pages/TweetsPage';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -43,6 +45,8 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/location/:id" element={<LocationDetail />} />
             <Route path="/map" element={<MapPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/tweets" element={<TweetsPage />} />
           </Route>
         </Route>
         

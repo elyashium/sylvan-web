@@ -1,10 +1,24 @@
 import { Menu, Bell, Settings, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const location = useLocation();
+
+  // Get the current page title based on the route
+  const getPageTitle = () => {
+    const path = location.pathname;
+    
+    if (path.startsWith('/dashboard')) return 'Dashboard';
+    if (path.startsWith('/map')) return 'Plant Map';
+    if (path.startsWith('/location/')) return 'Plant Details';
+    
+    // Add more routes as needed
+    return 'Sylvan';
+  };
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-white px-4 md:px-6">
@@ -16,7 +30,7 @@ const Navbar = () => {
       </div>
       
       <div className="hidden md:block">
-        <h1 className="text-xl font-semibold text-textPrimary">Dashboard</h1>
+        <h1 className="text-xl font-semibold text-textPrimary">{getPageTitle()}</h1>
       </div>
       
       <div className="flex items-center space-x-2">

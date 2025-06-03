@@ -4,7 +4,7 @@ import {
   LayoutDashboard, 
   Map, 
   BarChart2, 
-  Bell, 
+  MessageSquare, 
   Settings, 
   HelpCircle,
   ChevronLeft,
@@ -19,7 +19,7 @@ const Sidebar = () => {
     { title: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
     { title: 'Map View', icon: <Map size={20} />, path: '/map' },
     { title: 'Analytics', icon: <BarChart2 size={20} />, path: '/analytics' },
-    { title: 'Alerts', icon: <Bell size={20} />, path: '/alerts' },
+    { title: 'Plant Tweets', icon: <MessageSquare size={20} />, path: '/tweets' },
     { title: 'Settings', icon: <Settings size={20} />, path: '/settings' },
     { title: 'Help', icon: <HelpCircle size={20} />, path: '/help' },
   ];

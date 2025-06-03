@@ -82,3 +82,54 @@ export interface User {
   email: string;
   userType: 'household' | 'commercial';
 }
+
+// Plant Tweet type
+export interface PlantTweet {
+  id: string;
+  plantId: string;
+  plantName: string;
+  content: string;
+  emotion: 'happy' | 'angry' | 'stressed' | 'anxious';
+  timestamp: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
+
+// Analytics Data type
+export interface AnalyticsData {
+  plantHealth: {
+    healthy: number;
+    warning: number;
+    critical: number;
+  };
+  environmentalConditions: {
+    temperature: Array<{ date: string; value: number }>;
+    humidity: Array<{ date: string; value: number }>;
+    soilMoisture: Array<{ date: string; value: number }>;
+  };
+  plantEmotions: {
+    happy: number;
+    angry: number;
+    stressed: number;
+    anxious: number;
+  };
+  plantActivity: {
+    watering: number;
+    repositioning: number;
+    pruning: number;
+    fertilizing: number;
+  };
+  locationData: Array<{
+    name: string;
+    coordinates: { lat: number; lng: number };
+    plantCount: number;
+    healthStatus: { healthy: number; warning: number; critical: number };
+    averageConditions: {
+      temperature: number;
+      humidity: number;
+      soilMoisture: number;
+    };
+  }>;
+}
