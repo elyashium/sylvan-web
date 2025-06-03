@@ -1,18 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import { User } from 'firebase/auth';
+import { 
+  auth, 
+  loginWithEmailAndPassword, 
+  registerWithEmailAndPassword, 
+  logoutUser, 
+  signInWithGoogle,
+  resetPassword
+} from '../services/firebase';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  userType: 'household' | 'commercial' | null;
+  setUserType: (type: 'household' | 'commercial') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,41 +28,35 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userType, setUserType] = useState<'household' | 'commercial' | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const storedUser = localStorage.getItem('sylvan_user');
-    
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    
-    setIsLoading(false);
+    // Listen for auth state changes
+    const unsubscribe = auth.onAuthStateChanged((authUser) => {
+      if (authUser) {
+        setUser(authUser);
+        // Retrieve user type from localStorage if available
+        const storedUserType = localStorage.getItem('sylvan_user_type');
+        if (storedUserType === 'household' || storedUserType === 'commercial') {
+          setUserType(storedUserType);
+        }
+      } else {
+        setUser(null);
+        setUserType(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Clean up subscription
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulate API call
     setIsLoading(true);
-
     try {
-      // In a real app, this would be an API call to verify credentials
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes, accept any non-empty values
-      if (email && password) {
-        const demoUser = {
-          id: '1',
-          name: 'Demo User',
-          email: email
-        };
-        
-        setUser(demoUser);
-        localStorage.setItem('sylvan_user', JSON.stringify(demoUser));
-        navigate('/dashboard');
-      } else {
-        throw new Error('Please enter valid credentials');
-      }
+      await loginWithEmailAndPassword(email, password);
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -63,10 +65,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('sylvan_user');
-    navigate('/login');
+  const register = async (email: string, password: string, displayName: string) => {
+    setIsLoading(true);
+    try {
+      await registerWithEmailAndPassword(email, password, displayName);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithGoogle();
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Google login failed:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await logoutUser();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const forgotPassword = async (email: string) => {
+    try {
+      await resetPassword(email);
+    } catch (error) {
+      console.error('Password reset failed:', error);
+      throw error;
+    }
+  };
+
+  const handleSetUserType = (type: 'household' | 'commercial') => {
+    setUserType(type);
+    localStorage.setItem('sylvan_user_type', type);
   };
 
   return (
@@ -75,7 +120,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated: !!user, 
       isLoading, 
       login, 
-      logout 
+      register,
+      loginWithGoogle,
+      logout,
+      forgotPassword,
+      userType,
+      setUserType: handleSetUserType
     }}>
       {children}
     </AuthContext.Provider>

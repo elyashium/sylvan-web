@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import LocationDetail from './pages/LocationDetail';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -31,13 +32,20 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/location/:id" element={<LocationDetail />} />
+        
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/location/:id" element={<LocationDetail />} />
+          </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/\" replace />} />
+        
+        {/* Fallback Route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
   );
