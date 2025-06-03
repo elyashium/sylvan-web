@@ -67,6 +67,8 @@ const MapView = ({
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  console.log("[MapView] Received plantLocations:", JSON.stringify(plantLocations, null, 2));
+
   // Load Google Maps API
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -91,33 +93,41 @@ const MapView = ({
   // Handle map load
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
+    console.log("[MapView onLoad] Map instance loaded.");
     
     try {
-      // If we have plant locations, fit the map to them
       if (plantLocations.length > 0) {
+        console.log("[MapView onLoad] Attempting to fit bounds for plantLocations:", JSON.stringify(plantLocations, null, 2));
         const bounds = new google.maps.LatLngBounds();
         
         plantLocations.forEach(location => {
-          bounds.extend({ lat: location.lat, lng: location.lng });
-        });
-        
-        map.fitBounds(bounds);
-        
-        // Set reasonable zoom limits
-        google.maps.event.addListenerOnce(map, 'idle', () => {
-          const currentZoom = map.getZoom();
-          if (currentZoom !== undefined) {
-            if (currentZoom > 16) map.setZoom(16);
-            if (currentZoom < 9) map.setZoom(9);
+          if (typeof location.lat === 'number' && typeof location.lng === 'number') {
+            bounds.extend({ lat: location.lat, lng: location.lng });
+          } else {
+            console.warn("[MapView onLoad] Invalid lat/lng for location:", location.id, location.name);
           }
         });
+        
+        if (!bounds.isEmpty()) {
+            map.fitBounds(bounds);
+            // Log after a short delay to allow fitBounds to potentially complete its animation
+            setTimeout(() => {
+                console.log("[MapView onLoad] Map state after 500ms delay from fitBounds. Center:", JSON.stringify(map.getCenter()?.toJSON(), null, 2), "Zoom:", map.getZoom());
+            }, 500);
+        } else {
+            console.warn("[MapView onLoad] Bounds object is empty. Using initialCenter and zoom.");
+            map.setCenter(initialCenter);
+            map.setZoom(zoom);
+            console.log("[MapView onLoad] Set to initialCenter. Center:", JSON.stringify(map.getCenter()?.toJSON(), null, 2), "Zoom:", map.getZoom());
+        }
       } else {
-        // If no plants, just center on the initialCenter
+        console.log("[MapView onLoad] No plant locations. Using initialCenter and zoom.");
         map.setCenter(initialCenter);
         map.setZoom(zoom);
+        console.log("[MapView onLoad] Set to initialCenter. Center:", JSON.stringify(map.getCenter()?.toJSON(), null, 2), "Zoom:", map.getZoom());
       }
     } catch (error) {
-      console.error("Error initializing map:", error);
+      console.error("[MapView onLoad] Error during map initialization:", error);
       setMapError("Error displaying map");
     }
   }, [initialCenter, plantLocations, zoom]);
@@ -131,6 +141,7 @@ const MapView = ({
   }
 
   if (!isLoaded) {
+    console.log("[MapView] API not loaded or error occurred, plantLocations for markers:", JSON.stringify(plantLocations, null, 2));
     return (
       <div className="flex h-full w-full items-center justify-center bg-white rounded-lg shadow-sm p-8">
         <div className="flex flex-col items-center">
@@ -140,6 +151,8 @@ const MapView = ({
       </div>
     );
   }
+
+  console.log("[MapView] Rendering GoogleMap with plantLocations:", JSON.stringify(plantLocations, null, 2));
 
   return (
     <div className="h-full w-full rounded-lg shadow-sm overflow-hidden">

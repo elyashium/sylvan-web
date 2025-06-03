@@ -8,6 +8,7 @@ interface PlantMarkerProps {
 }
 
 const PlantMarker = ({ plant }: PlantMarkerProps) => {
+  console.log("[PlantMarker] Rendering for plant:", JSON.stringify(plant, null, 2));
   const [isOpen, setIsOpen] = useState(false);
   const [markerInstance, setMarkerInstance] = useState<google.maps.Marker | null>(null);
   const navigate = useNavigate();
